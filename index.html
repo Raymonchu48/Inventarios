@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inventario Pro · GitHub + Supabase</title>
+  <meta name="description" content="App de inventario lista para GitHub Pages y Supabase" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">IP</div>
+        <div>
+          <h1>Inventario Pro</h1>
+          <p>GitHub Pages + Supabase</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="productos">Productos</button>
+        <button class="nav-btn" data-view="movimientos">Movimientos</button>
+        <button class="nav-btn" data-view="configuracion">Configuración</button>
+      </nav>
+      <div class="status-card">
+        <div id="connectionBadge" class="badge off">Sin conexión</div>
+        <p id="connectionText">Configura Supabase para empezar.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="viewTitle">Dashboard</h2>
+          <p class="muted">Control de stock con persistencia real en Supabase.</p>
+        </div>
+        <div class="top-actions">
+          <button id="btnRefresh" class="btn secondary">Actualizar</button>
+          <button id="btnSeed" class="btn">Importar Excel inicial</button>
+        </div>
+      </header>
+
+      <section id="view-dashboard" class="view active">
+        <div class="kpi-grid">
+          <article class="card kpi"><span>Total productos</span><strong id="kpiProductos">0</strong></article>
+          <article class="card kpi"><span>Stock total</span><strong id="kpiStock">0</strong></article>
+          <article class="card kpi"><span>Bajo mínimo</span><strong id="kpiBajoMinimo">0</strong></article>
+          <article class="card kpi"><span>Sin stock</span><strong id="kpiSinStock">0</strong></article>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-header">
+              <h3>Productos críticos</h3>
+            </div>
+            <div id="criticalList" class="list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <h3>Últimos movimientos</h3>
+            </div>
+            <div id="recentMoves" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-productos" class="view">
+        <div class="card filters">
+          <input id="searchInput" type="search" placeholder="Buscar por código, descripción o presentación" />
+          <select id="categoryFilter"><option value="">Todas las categorías</option></select>
+          <select id="stockFilter">
+            <option value="">Todo el stock</option>
+            <option value="low">Bajo mínimo</option>
+            <option value="out">Sin stock</option>
+            <option value="ok">Stock correcto</option>
+          </select>
+          <button id="btnNewProduct" class="btn">Nuevo producto</button>
+        </div>
+
+        <div class="card table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Unidad</th>
+                <th>Stock</th>
+                <th>Mínimo</th>
+                <th>Página</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="productsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-movimientos" class="view">
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-header"><h3>Registrar movimiento</h3></div>
+            <form id="movementForm" class="form">
+              <label>Producto
+                <select id="movementProduct" required></select>
+              </label>
+              <label>Tipo
+                <select id="movementType" required>
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
+                  <option value="ajuste">Ajuste</option>
+                </select>
+              </label>
+              <label>Cantidad
+                <input id="movementQty" type="number" step="0.01" min="0.01" required />
+              </label>
+              <label>Nota
+                <textarea id="movementNote" rows="3" placeholder="Ej. recepción proveedor, rotura, ajuste tras conteo"></textarea>
+              </label>
+              <button class="btn" type="submit">Guardar movimiento</button>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-header"><h3>Historial</h3></div>
+            <div id="movementHistory" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-configuracion" class="view">
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-header"><h3>Conexión Supabase</h3></div>
+            <form id="configForm" class="form">
+              <label>Supabase URL
+                <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co" required />
+              </label>
+              <label>Supabase anon key
+                <textarea id="supabaseKey" rows="5" placeholder="Pega aquí tu anon public key" required></textarea>
+              </label>
+              <div class="inline-actions">
+                <button class="btn" type="submit">Guardar conexión</button>
+                <button id="btnClearConfig" class="btn secondary" type="button">Limpiar</button>
+                <button id="btnTestConnection" class="btn secondary" type="button">Probar</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-header"><h3>Guía rápida</h3></div>
+            <ol class="steps">
+              <li>Crea un proyecto en Supabase.</li>
+              <li>Ejecuta <code>schema.sql</code> y luego <code>seed.sql</code>.</li>
+              <li>Pega la URL y la anon key arriba.</li>
+              <li>Sube esta carpeta a GitHub y activa GitHub Pages.</li>
+              <li>Abre tu web y empieza a trabajar.</li>
+            </ol>
+            <p class="muted">Para endurecer seguridad, el siguiente paso es añadir autenticación y políticas por usuario.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="productDialog">
+    <form id="productForm" class="dialog-card">
+      <div class="dialog-header">
+        <h3 id="productDialogTitle">Nuevo producto</h3>
+        <button type="button" id="btnCloseDialog" class="icon-btn">✕</button>
+      </div>
+      <input type="hidden" id="productId" />
+      <div class="form-grid">
+        <label>Código<input id="pStockCode" type="text" /></label>
+        <label>Descripción<input id="pDescripcion" type="text" required /></label>
+        <label>Presentación<input id="pPresentacion" type="text" /></label>
+        <label>Fecha stock<input id="pStDate" type="text" placeholder="31-08-25" /></label>
+        <label>Unidad<input id="pUnit" type="text" /></label>
+        <label>Cantidad<input id="pCantidad" type="number" step="0.01" min="0" required /></label>
+        <label>Mínimo<input id="pMinStock" type="number" step="0.01" min="0" required /></label>
+        <label>Página<input id="pPagina" type="number" step="1" min="0" /></label>
+        <label>Categoría<select id="pCategoria"></select></label>
+        <label>Cantidad original<input id="pCantidadOriginal" type="text" /></label>
+        <label class="full">Detalle cantidad<input id="pDetalleCantidad" type="text" /></label>
+      </div>
+      <div class="inline-actions">
+        <button class="btn" type="submit">Guardar producto</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="emptyStateTpl">
+    <div class="empty-state">No hay datos para mostrar.</div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
